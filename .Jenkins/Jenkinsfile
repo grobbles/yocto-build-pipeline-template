@@ -1,0 +1,123 @@
+pipeline {
+    agent none
+    options { 
+        skipDefaultCheckout() 
+    }
+    stages {
+        stage('Checkout Submodules'){
+            agent any 
+            steps {
+                // This step is very important because the env.WORKSPACE variable is in the docker{env.WORKSPACE} environment null.
+                script {
+                    env.WS = "${env.WORKSPACE}"
+                }
+                sh "echo 'Checkout All'"
+            }
+        }
+        stage('Build'){
+            agent {
+                docker {
+                    image 'yocto_build_environment'
+                }  
+            }
+            options { skipDefaultCheckout() }
+            steps {
+                sh "chmod +x buildEnvironment/yoctoImageBuild.sh"
+                sh "./buildEnvironment/yoctoImageBuild.sh ${env.WS}"
+            }
+        }
+        stage('Create Distribution'){
+            agent any
+            steps {
+                sh "rm -rf dist"
+                sh "mkdir dist"
+                sh "mv yocto/build/tmp/deploy/images/genericx86-64/bzImage--*-genericx86-64-*.bin dist/bzImage-genericx86-64.bin"
+                sh "mv yocto/build/tmp/deploy/images/genericx86-64/core-image-minimal-genericx86-64-*.cpio.lz4 dist/core-image-minimal-genericx86-64.cpio.lz4"
+            }
+        }
+        stage('Component Test') {
+            agent {
+                docker {
+                    image 'yocto_test_environment'
+                }
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'f775931e-d792-42b2-a335-278f3ad559c6', passwordVariable: 'artifactoryPassword', usernameVariable: 'artifactoryUser')]) {
+                    sh "cd buildEnvironment/Test/ComponentTest && pytest . --junitxml=./testOutput/testResults.xml --cmxAddress ${CmxAddress} --cmxName ${CmxName} --artifactoryUser ${artifactoryUser} --artifactoryPassword ${artifactoryPassword}  --distPath ${env.WS}/dist/"
+                }
+            }
+        }
+        stage('Integration Test'){
+            agent {
+                docker {
+                    image 'yocto_test_environment'
+                }
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'f775931e-d792-42b2-a335-278f3ad559c6', passwordVariable: 'artifactoryPassword', usernameVariable: 'artifactoryUser')]) {
+                    sh "cd buildEnvironment/Test/IntegrationTests && pytest . --junitxml=./testOutput/testResults.xml --cmxAddress ${CmxAddress} --cmxName ${CmxName} --artifactoryUser ${artifactoryUser} --artifactoryPassword ${artifactoryPassword} --distPath ${env.WS}/dist/"
+                }
+            }
+        }
+        stage('Publish Test Results') {
+            agent any
+            steps {
+                sh "echo 'Publish Test Results'"
+                junit 'buildEnvironment/Test/IntegrationTests/testOutput/*.xml'
+                junit 'buildEnvironment/Test/ComponentTest/testOutput/*.xml'
+            }
+        }
+        stage('Archive Artifacts') {
+            agent any
+            when {
+                branch 'master'
+            }
+            steps {
+                archiveArtifacts 'dist/*.bin'
+                archiveArtifacts 'dist/*.lz4'
+            }
+        }
+        stage('Create Version') {
+            agent any
+            when {
+                branch 'master'
+            }
+            steps {
+              sh "echo 'generate Version'"
+            }
+        }
+        stage('Tag Master with Version') {
+            agent any
+            when {
+                branch 'master'
+            }
+            steps {
+              sh "echo 'Deploy to Staging'"
+            }
+        }
+        stage('Deploy to Staging') {
+            agent any
+            when {
+                branch 'master'
+            }
+            steps {
+              sh "echo 'Deploy to Staging'"
+            }
+        }
+        stage('Deploy to Production') {
+            when {
+                branch 'master'
+            }
+            steps {
+                  input "Deploy to Production?"
+                  sh "echo 'Deploy to Production'"
+            }
+        }
+        stage('Clean Workspace') {
+            agent any
+            steps {
+                cleanWs() 
+            }
+        }
+    }
+}
