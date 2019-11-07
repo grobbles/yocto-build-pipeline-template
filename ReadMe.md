@@ -1,14 +1,12 @@
-# CMX Test Framework
+# Yocto Build Pipeline Template
 
 ## Description
 
-This Framework is for testing the CMX at low level. This small tool is only for developer and allow a low level access to CMX.
-
 ## Git Workflow
 
-* master branch
-* feature branch
-* bugfix branch
+-   master branch
+-   feature branch
+-   bugfix branch
 
 If you want to add a new feature than create a new branch from master branch and commit your stuff to the branch. If you think you are done than create a merge request and add me (Uwe Roder) as reviewer.
 
@@ -17,12 +15,12 @@ If you want to add a new feature than create a new branch from master branch and
 It give three segments (Major version).(Minor version).(Patch version)
 
 1. Major version - incremented for backwards-incompatible changes
-    * Major version must be incremented manually in the 'setup.py' file.
-    * It will be read only the Major version from the file. The other version numbers will be ignore and will be override from script.
+    - Major version must be incremented manually in the 'setup.py' file.
+    - It will be read only the Major version from the file. The other version numbers will be ignore and will be override from script.
 2. Minor version - incremented for new, backwards-compatible functionality is introduced to the API
-    * Minor version will be incremented automatically if a feature branch merged in the master branch.
+    - Minor version will be incremented automatically if a feature branch merged in the master branch.
 3. Patch version - incremented for backwards-compatible bug fixes
-    * Patch version will be incremented automatically if a bugfix branch merged in the master branch.
+    - Patch version will be incremented automatically if a bugfix branch merged in the master branch.
 
 Example:
 
